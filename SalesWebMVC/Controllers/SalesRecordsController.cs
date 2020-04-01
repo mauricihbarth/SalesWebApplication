@@ -3,151 +3,54 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using SalesWebMVC.Data;
-using SalesWebMVC.Models;
+using SalesWebMvc.Services;
 
-namespace SalesWebMVC.Controllers
+namespace SalesWebMvc.Controllers
 {
     public class SalesRecordsController : Controller
     {
-        private readonly SalesWebMVCContext _context;
+        private readonly SalesRecordService _salesRecordService;
 
-        public SalesRecordsController(SalesWebMVCContext context)
+        public SalesRecordsController(SalesRecordService salesRecordService)
         {
-            _context = context;
+            _salesRecordService = salesRecordService;
         }
 
-        // GET: SalesRecords
-        public async Task<IActionResult> Index()
-        {
-            return View(await _context.SalesRecord.ToListAsync());
-        }
-
-        // GET: SalesRecords/Details/5
-        public async Task<IActionResult> Details(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var salesRecord = await _context.SalesRecord
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (salesRecord == null)
-            {
-                return NotFound();
-            }
-
-            return View(salesRecord);
-        }
-
-        // GET: SalesRecords/Create
-        public IActionResult Create()
+        public IActionResult Index()
         {
             return View();
         }
 
-        // POST: SalesRecords/Create
-        // To protect from overposting attacks, please enable the specific properties you want to bind to, for 
-        // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Date,Amount,Status")] SalesRecord salesRecord)
+        public async Task<IActionResult> SimpleSearch(DateTime? minDate, DateTime? maxDate)
         {
-            if (ModelState.IsValid)
+            if (!minDate.HasValue)
             {
-                _context.Add(salesRecord);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                minDate = new DateTime(DateTime.Now.Year, 1, 1);
             }
-            return View(salesRecord);
+            if (!maxDate.HasValue)
+            {
+                maxDate = DateTime.Now;
+            }
+            ViewData["minDate"] = minDate.Value.ToString("yyyy-MM-dd");
+            ViewData["maxDate"] = maxDate.Value.ToString("yyyy-MM-dd");
+            var result = await _salesRecordService.FindByDateAsync(minDate, maxDate);
+            return View(result);
         }
 
-        // GET: SalesRecords/Edit/5
-        public async Task<IActionResult> Edit(int? id)
+        public async Task<IActionResult> GroupingSearch(DateTime? minDate, DateTime? maxDate)
         {
-            if (id == null)
+            if (!minDate.HasValue)
             {
-                return NotFound();
+                minDate = new DateTime(DateTime.Now.Year, 1, 1);
             }
-
-            var salesRecord = await _context.SalesRecord.FindAsync(id);
-            if (salesRecord == null)
+            if (!maxDate.HasValue)
             {
-                return NotFound();
+                maxDate = DateTime.Now;
             }
-            return View(salesRecord);
-        }
-
-        // POST: SalesRecords/Edit/5
-        // To protect from overposting attacks, please enable the specific properties you want to bind to, for 
-        // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Date,Amount,Status")] SalesRecord salesRecord)
-        {
-            if (id != salesRecord.Id)
-            {
-                return NotFound();
-            }
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(salesRecord);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!SalesRecordExists(salesRecord.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            return View(salesRecord);
-        }
-
-        // GET: SalesRecords/Delete/5
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var salesRecord = await _context.SalesRecord
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (salesRecord == null)
-            {
-                return NotFound();
-            }
-
-            return View(salesRecord);
-        }
-
-        // POST: SalesRecords/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            var salesRecord = await _context.SalesRecord.FindAsync(id);
-            _context.SalesRecord.Remove(salesRecord);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-
-        private bool SalesRecordExists(int id)
-        {
-            return _context.SalesRecord.Any(e => e.Id == id);
+            ViewData["minDate"] = minDate.Value.ToString("yyyy-MM-dd");
+            ViewData["maxDate"] = maxDate.Value.ToString("yyyy-MM-dd");
+            var result = await _salesRecordService.FindByDateGroupingAsync(minDate, maxDate);
+            return View(result);
         }
     }
 }
